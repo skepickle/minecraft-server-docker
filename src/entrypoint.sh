@@ -1,5 +1,8 @@
 #!/bin/bash
 
+USE_ORACLE_JAVA=${I_ACCEPT_ORACLE_JAVA_LICENSE:-no}
+USE_MINECRAFT=${I_ACCEPT_MINECRAFT_EULA:-no}
+
 USER_ID=${LOCAL_USER_ID:-9001}
 export HOME=/mc
 export DATA=/mc_data
@@ -12,8 +15,13 @@ chown -R mc:mc $DATA
 
 # Accept EULA ;-)
 if [[ ! -e $DATA/eula.txt ]]; then
-  echo "eula=TRUE" > $DATA/eula.txt
-  chown mc:mc $DATA/eula.txt
+  if [ "$USE_MINECRAFT" == "yes" ]; then
+    echo "eula=TRUE" > $DATA/eula.txt
+    chown mc:mc $DATA/eula.txt
+  else
+    echo "The Minecraft EULA must be accepted by passing in I_ACCEPT_MINECRAFT_EULA=yes as an environment variable"
+    exit 1
+  fi
 fi
 ln -s $DATA/eula.txt $HOME/eula.txt
 chown -h mc:mc $HOME/eula.txt
@@ -54,6 +62,23 @@ chown -h mc:mc $HOME/minecraft_server.jar.url
 wget -q -O - $(cat $HOME/minecraft_server.jar.url) \
  > $HOME/minecraft_server.jar
 chown mc:mc $HOME/minecraft_server.jar
+
+if [ "$USE_ORACLE_JAVA" == "yes" ]; then
+  echo "deb http://ppa.launchpad.net/webupd8team/java/ubuntu xenial main" \
+    > /etc/apt/sources.list.d/webupd8team-ubuntu-java-xenial.list
+  apt-key adv --keyserver keyserver.ubuntu.com --recv-keys C2518248EEA14886
+  echo debconf shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+  echo debconf shared/accepted-oracle-license-v1-1 seen true   | debconf-set-selections
+  DEBIAN_FRONTEND=noninteractive set -x \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+         oracle-java8-installer
+else
+  DEBIAN_FRONTEND=noninteractive set -x \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+         openjdk-8-jre
+fi
 
 EXEC=exec
 DIRECTORIES="$LEVELNAME logs"

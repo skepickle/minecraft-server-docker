@@ -7,7 +7,6 @@ RUN DEBIAN_FRONTEND=noninteractive set -x \
     && apt-get install -y --no-install-recommends \
          ca-certificates wget \
          libterm-readkey-perl libterm-readline-gnu-perl \
-         openjdk-8-jre \
     && rm -rf /var/lib/apt/lists/*
 
 ENV GOSU_VERSION 1.9
