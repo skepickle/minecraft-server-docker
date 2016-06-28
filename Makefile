@@ -7,7 +7,13 @@ INSTANCE = default
 
 PORTS = -p 25565:25565/tcp
 VOLUMES = -v $(shell pwd)/mc_data:/mc_data
-ENV = -e LOCAL_USER_ID=$(shell id -u ${USER})
+ifeq ("${I_ACCEPT_MINECRAFT_EULA}","yes")
+MC_ENV = -e I_ACCEPT_MINECRAFT_EULA=yes
+endif
+ifeq (${I_ACCEPT_ORACLE_JAVA_LICENSE},"yes")
+OJ_ENV = -e I_ACCEPT_ORACLE_JAVA_LICENSE=yes
+endif
+ENV = -e LOCAL_USER_ID=$(shell id -u ${USER}) ${MC_ENV} ${OJ_ENV}
 
 .PHONY: build push shell run start stop rm release
 
