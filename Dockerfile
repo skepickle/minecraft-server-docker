@@ -4,6 +4,7 @@ MAINTAINER Skepickle
 
 RUN DEBIAN_FRONTEND=noninteractive set -x \
     && apt-get update \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
          ca-certificates wget \
          libterm-readkey-perl libterm-readline-gnu-perl \
@@ -28,6 +29,8 @@ RUN chmod +x /tmp/entrypoint.sh
 RUN chmod +x /tmp/wrapper.pl
 
 EXPOSE 25565/tcp
+EXPOSE 25565/udp
+EXPOSE 25575/tcp
 
 ENTRYPOINT ["/tmp/entrypoint.sh"]
 
