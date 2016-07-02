@@ -15,7 +15,7 @@ OJ_ENV = -e I_ACCEPT_ORACLE_JAVA_LICENSE=yes
 endif
 ENV = -e LOCAL_USER_ID=$(shell id -u ${USER}) ${MC_ENV} ${OJ_ENV}
 
-.PHONY: build push shell run start stop rm release
+.PHONY: build push shell run start attach logs stop rm release default
 
 build:
 	docker build -t $(NS)/$(REPO):$(VERSION) .
@@ -25,7 +25,6 @@ push:
 
 shell:
 	docker run           --name $(NAME)-$(INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(REPO):$(VERSION) /bin/bash
-	make rm
 
 run:
 	docker run           --name $(NAME)-$(INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(REPO):$(VERSION)
