@@ -29,6 +29,8 @@ RUN chmod +x /tmp/entrypoint.sh
 RUN chmod +x /tmp/wrapper.pl
 
 EXPOSE 25565/tcp
+EXPOSE 25565/udp
+EXPOSE 25575/tcp
 
 ENTRYPOINT ["/tmp/entrypoint.sh"]
 
