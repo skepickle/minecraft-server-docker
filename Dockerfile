@@ -4,7 +4,7 @@ MAINTAINER Skepickle
 
 RUN DEBIAN_FRONTEND=noninteractive set -x \
     && apt-get update \
-    && apt-get upgrade \
+    && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
          ca-certificates wget \
          libterm-readkey-perl libterm-readline-gnu-perl \
