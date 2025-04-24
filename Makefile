@@ -23,8 +23,11 @@ build:
 push:
 	docker push $(NS)/$(REPO):$(VERSION)
 
+#shell:
+#	docker run           --name $(NAME)-$(INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(REPO):$(VERSION) /bin/bash
+
 shell:
-	docker run           --name $(NAME)-$(INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(REPO):$(VERSION) /bin/bash
+	docker exec          -it    $(NAME)-$(INSTANCE) /bin/bash
 
 run:
 	docker run           --name $(NAME)-$(INSTANCE) -i -t $(PORTS) $(VOLUMES) $(ENV) $(NS)/$(REPO):$(VERSION)

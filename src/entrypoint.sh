@@ -77,7 +77,17 @@ else
   DEBIAN_FRONTEND=noninteractive set -x \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-         openjdk-8-jre
+         openjdk-21-jre
+fi
+
+#EXPERIMENT!
+if [[ ! -e $DATA/$LEVELNAME ]]; then
+	mkdir $DATA/$LEVELNAME
+	chown mc:mc $DATA/$LEVELNAME
+fi
+if [[ ! -e $DATA/logs ]]; then
+	mkdir $DATA/logs
+	chown mc:mc $DATA/logs
 fi
 
 EXEC=exec
@@ -100,6 +110,7 @@ else
   $EXEC $@
 fi
 
+# The following is only needed in case there are new subfolders created in the container's data folder
 for DIRECTORY in $DIRECTORIES; do
   if [[ ! -e $DATA/$DIRECTORY ]] && [[ -e $HOME/$DIRECTORY ]]; then
     cp -r $HOME/$DIRECTORY $DATA/$DIRECTORY

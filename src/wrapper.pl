@@ -19,7 +19,7 @@ $term->MinLine();
 $term->ornaments(0);
 
 my ($pm_stdin_h, $pm_stdout_h, $pm_stderr_h);
-my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h, 'java -Xmx1024M -Xms1024M -jar minecraft_server.jar nogui')
+my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h, 'java -Xmx4096M -Xms1024M -jar minecraft_server.jar nogui')
     or die "open3() failed $!";
 
 ReadMode('raw', $pm_stdout_h);
@@ -76,7 +76,7 @@ while (1) {
     $idle         = 0;
   };
 
-  # Pipe full output lines from PocketMine-MP
+  # Pipe full output lines from Minecraft Server
   if ((defined $pm_stdout_h) &&
       (pipe_lines($pm_stdout_h,$pm_stdout_buffer,'<'))) { $idle = 0; };
   if ((defined $pm_stderr_h) &&
@@ -97,19 +97,19 @@ while (1) {
     };
   };
 
-  # Pipe full output lines from PocketMine-MP (Again)
+  # Pipe full output lines from Minecraft Server (Again)
   if ((defined $pm_stdout_h) &&
       (pipe_lines($pm_stdout_h,$pm_stdout_buffer,'<'))) { $idle = 0; };
   if ((defined $pm_stderr_h) &&
       (pipe_lines($pm_stderr_h,$pm_stderr_buffer,'!'))) { $idle = 0; };
 
-  # Write the line of input from keyboard into PocketMine-MP's STDIN
+  # Write the line of input from keyboard into Minecraft Server STDIN
   if ($key_buffer ne "") {
     printf $pm_stdin_h $key_buffer . "\n";
     $key_buffer = "";
   };
 
-  # Check if PocketMine-MP is still running
+  # Check if Minecraft Server is still running
   my $res = waitpid($pmmp_pid, WNOHANG);
   if ($res == -1) {
     $result = $? >> 8;
@@ -118,7 +118,7 @@ while (1) {
   };
   if ($res) {
     $result = $? >> 8;
-    printf "PocketMine-MP ended with error code %d\n", $result;
+    printf "Minecraft server exited with error code %d\n", $result;
     my $count_down = 5;
     print "Stopping container in:\n";
     while ($count_down >= 0) {
