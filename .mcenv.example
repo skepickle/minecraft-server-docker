@@ -1,0 +1,2 @@
+export I_ACCEPT_MINECRAFT_EULA=yes
+export JAVA_OPTS="-Xms1024M -Xmx4096M"
