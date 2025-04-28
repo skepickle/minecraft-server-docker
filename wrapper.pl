@@ -19,7 +19,7 @@ $term->MinLine();
 $term->ornaments(0);
 
 my ($pm_stdin_h, $pm_stdout_h, $pm_stderr_h);
-my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h, 'java -Xmx4096M -Xms1024M -jar minecraft_server.jar nogui')
+my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h, "java $ENV{JAVA_OPTS} -jar minecraft_server.jar nogui")
     or die "open3() failed $!";
 
 ReadMode('raw', $pm_stdout_h);
