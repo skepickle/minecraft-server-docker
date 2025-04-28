@@ -1,0 +1,13 @@
+[Unit]
+Description=tmux primary service for example user
+
+[Service] 
+Type=forking
+User=example
+WorkingDirectory=/home/example
+
+ExecStart=/usr/bin/tmux new-session -s primary -d
+ExecStop=/usr/bin/tmux kill-session -t primary
+
+[Install]
+WantedBy=multi-user.target

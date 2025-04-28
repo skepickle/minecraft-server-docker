@@ -1,0 +1,16 @@
+[Unit]
+Description=tmux agent service for example user
+PartOf=tmux-example-primary.service
+After=tmux-example-primary.service
+
+[Service] 
+Type=oneshot
+RemainAfterExit=yes
+User=example
+WorkingDirectory=/home/example/mc1
+
+ExecStart=/usr/bin/tmux new-session -s mc1 -d 'wrapper/start.sh'
+#ExecStop=/usr/bin/tmux kill-session -t mc1
+
+[Install]
+WantedBy=multi-user.target
