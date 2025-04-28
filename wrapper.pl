@@ -118,15 +118,7 @@ while (1) {
   };
   if ($res) {
     $result = $? >> 8;
-    printf "Minecraft server exited with error code %d\n", $result;
-    my $count_down = 5;
-    print "Stopping container in:\n";
-    while ($count_down >= 0) {
-      printf "\t%d%s\n", $count_down, ($count_down>0)?("..."):(".");
-      $count_down -= 1;
-      sleep(1);
-    };
-    print "Goodbye\n";
+    printf "Minecraft server java process exited with error code %d\n", $result;
     last;
   };
 
