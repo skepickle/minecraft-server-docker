@@ -1,14 +1,18 @@
 #!/bin/bash
-# NOTE: This script should be executed with `pwd` at the Minecraft world's base folder
-. .mcenv
-USE_ORACLE_JAVA=${I_ACCEPT_ORACLE_JAVA_LICENSE:-'false'}
-USE_MINECRAFT=${I_ACCEPT_MINECRAFT_EULA:-'false'}
 
 if [[ -e /.dockerenv ]]; then
   IN_DOCKER='true'
 else
   IN_DOCKER='false'
 fi
+
+if [[ "${IN_DOCKER}" == "false" ]]; then tmux pipe-pane -o "cat >>$(pwd)/wrapper.log"; fi
+
+# NOTE: This script should be executed with `pwd` at the Minecraft world's base folder
+. .mcenv
+USE_ORACLE_JAVA=${I_ACCEPT_ORACLE_JAVA_LICENSE:-'false'}
+USE_MINECRAFT=${I_ACCEPT_MINECRAFT_EULA:-'false'}
+
 
 if [[ "${IN_DOCKER}" == "true" ]]; then
   USER_ID=${LOCAL_USER_ID:-9001}
