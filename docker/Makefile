@@ -7,11 +7,11 @@ INSTANCE = default
 
 PORTS = -p 25565:25565/tcp
 VOLUMES = -v $(shell pwd)/mc_data:/mc_data
-ifeq ("${I_ACCEPT_MINECRAFT_EULA}","yes")
-MC_ENV = -e I_ACCEPT_MINECRAFT_EULA=yes
+ifeq ("${I_ACCEPT_MINECRAFT_EULA}","true")
+MC_ENV = -e I_ACCEPT_MINECRAFT_EULA='true'
 endif
-ifeq ("${I_ACCEPT_ORACLE_JAVA_LICENSE}","yes")
-OJ_ENV = -e I_ACCEPT_ORACLE_JAVA_LICENSE=yes
+ifeq ("${I_ACCEPT_ORACLE_JAVA_LICENSE}","true")
+OJ_ENV = -e I_ACCEPT_ORACLE_JAVA_LICENSE='true'
 endif
 ENV = -e LOCAL_USER_ID=$(shell id -u ${USER}) ${MC_ENV} ${OJ_ENV}
 

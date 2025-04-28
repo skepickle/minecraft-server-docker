@@ -42,13 +42,13 @@ RUN set -eux; \
 RUN mkdir /mc_data
 VOLUME /mc_data
 
-COPY src/* /tmp/
-RUN chmod +x /tmp/entrypoint.sh
+COPY ../* /tmp/
+RUN chmod +x /tmp/start.sh
 RUN chmod +x /tmp/wrapper.pl
 
 EXPOSE 25565/tcp
 EXPOSE 25565/udp
 EXPOSE 25575/tcp
 
-ENTRYPOINT ["/tmp/entrypoint.sh"]
+ENTRYPOINT ["/tmp/start.sh"]
 
