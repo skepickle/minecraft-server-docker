@@ -10,7 +10,7 @@ User=example
 WorkingDirectory=/home/example/mc1
 
 ExecStart=/usr/bin/tmux new-session -s mc1 -d 'wrapper/start.sh'
-#ExecStop=/usr/bin/tmux kill-session -t mc1
+ExecStop=/bin/sh -c '/usr/bin/tmux list-panes -t mc1 -F "#{pane_pid}" | /usr/bin/xargs ps -o tpgid= | /usr/bin/xargs -I{} kill -s SIGTERM {}'
 
 [Install]
 WantedBy=multi-user.target
