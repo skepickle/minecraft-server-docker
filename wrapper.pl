@@ -10,8 +10,10 @@ use Time::HiRes qw(sleep);
 
 my $DEBUG = 0;
 
-$SIG{TSTP} = sub { };
-#TODO: Add clean shutdown for $SIG{TERM} and $SIG{KILL}
+#$SIG{TSTP} = sub { };
+$SIG{INT}  = 'IGNORE';
+#$SIG{QUIT} = sub { };
+#$SIG{HUP} = sub { print("# HUP  GOT\n"); die; };
 
 my $term = new Term::ReadLine 'ProgramName';
 print "DEBUG Using: ", $term->ReadLine, "\n" if ($DEBUG);
@@ -19,7 +21,8 @@ $term->MinLine();
 $term->ornaments(0);
 
 my ($pm_stdin_h, $pm_stdout_h, $pm_stderr_h);
-my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h, "java $ENV{JAVA_OPTS} -jar minecraft_server.jar nogui")
+my $pmmp_pid = open3($pm_stdin_h, $pm_stdout_h, $pm_stderr_h,
+                     "java $ENV{JAVA_OPTS} -jar minecraft_server.jar nogui")
     or die "open3() failed $!";
 
 ReadMode('raw', $pm_stdout_h);
@@ -28,6 +31,7 @@ ReadMode('raw');
 
 my $key_pressed = "";
 my $key_buffer = "";
+my $sigterm = 0;
 my $key_preput = "";
 my $pm_stdout_buffer = "";
 my $pm_stderr_buffer = "";
@@ -38,8 +42,41 @@ my $idle = 1;
 
 my $result = 0;
 
+sub sigterm_handler {
+  my $ret = 0;
+  print("# Received SIGTERM\n");
+  printf $pm_stdin_h "stop\n";
+  # Pipe full output lines from Minecraft Server
+  while (1) {
+    flush_output_pipes($pm_stdout_h, $pm_stdout_buffer, $pm_stderr_h, $pm_stderr_buffer);
+    my $r = waitpid($pmmp_pid, WNOHANG);
+    my $e = $?;
+    if ($r == -1) {
+      $ret = $e >> 8;
+      printf "Some error occurred %d\n", $ret;
+      last;
+    };
+    if ($r) {
+      $ret = $e >> 8;
+      printf "Minecraft server java process exited with error code %d\n", $ret;
+      printf "res = %d\n", $r;
+      printf "err = %d\n", $e;
+      last;
+    };
+    sleep(0.1);
+  };
+  exit($ret);
+};
+
+$SIG{TERM} = \&sigterm_handler;
+
 while (1) {
   $idle = 1;
+
+  #TODO: check for presence of special action files
+  if (-e "..SAVE-ALL") {
+    unlink("..SAVE-ALL");
+  };
 
   # Check STDIN for either '/' or up-arrow
   $key_pressed = ReadKey(-1);
@@ -77,48 +114,51 @@ while (1) {
   };
 
   # Pipe full output lines from Minecraft Server
-  if ((defined $pm_stdout_h) &&
-      (pipe_lines($pm_stdout_h,$pm_stdout_buffer,'<'))) { $idle = 0; };
-  if ((defined $pm_stderr_h) &&
-      (pipe_lines($pm_stderr_h,$pm_stderr_buffer,'!'))) { $idle = 0; };
+  flush_output_pipes($pm_stdout_h, $pm_stdout_buffer, $pm_stderr_h, $pm_stderr_buffer);
 
   # If keyboard pressed '/' or up-arrow earlier, capture a line of input
   if ($key_pressed) {
     if ($key_preput eq "") {
-      $key_buffer = readline_signaltrap($term,'/');
+      ($key_buffer, $sigterm) = readline_signaltrap($term,'/');
       $term->add_history($key_buffer) unless ($key_buffer eq "");
     } else {
       $key_preput = $term->history_get($term->Attribs->{history_length});
       $term->remove_history($term->Attribs->{history_length}-1);
-      $key_buffer = readline_signaltrap($term,'/',$key_preput);
+      ($key_buffer, $sigterm) = readline_signaltrap($term,'/',$key_preput);
       $term->add_history($key_preput);
       $term->add_history($key_buffer) unless ($key_buffer eq "");
       $key_preput = "";
     };
   };
 
-  # Pipe full output lines from Minecraft Server (Again)
-  if ((defined $pm_stdout_h) &&
-      (pipe_lines($pm_stdout_h,$pm_stdout_buffer,'<'))) { $idle = 0; };
-  if ((defined $pm_stderr_h) &&
-      (pipe_lines($pm_stderr_h,$pm_stderr_buffer,'!'))) { $idle = 0; };
+  # Pipe full output lines from Minecraft Server
+  flush_output_pipes($pm_stdout_h, $pm_stdout_buffer, $pm_stderr_h, $pm_stderr_buffer);
 
-  # Write the line of input from keyboard into Minecraft Server STDIN
-  if ($key_buffer ne "") {
+  if ($sigterm) { sigterm_handler(); };
+
+  if (rindex($key_buffer, "/", 0) == 0) {
+    # Recognize "//" prefix in input and perform wrapper function instead of passing through directly to Minecraft Server
+    printf "double slash?\n";
+    $key_buffer = "";
+  } elsif ($key_buffer ne "") {
+    # Write the line of input from keyboard into Minecraft Server STDIN
     printf $pm_stdin_h $key_buffer . "\n";
     $key_buffer = "";
   };
 
   # Check if Minecraft Server is still running
   my $res = waitpid($pmmp_pid, WNOHANG);
+  my $err = $?;
   if ($res == -1) {
-    $result = $? >> 8;
+    $result = $err >> 8;
     printf "Some error occurred %d\n", $result;
     last;
   };
   if ($res) {
-    $result = $? >> 8;
+    $result = $err >> 8;
     printf "Minecraft server java process exited with error code %d\n", $result;
+    printf "res = %d\n", $res;
+    printf "err = %d\n", $err;
     last;
   };
 
@@ -159,6 +199,7 @@ sub readline_signaltrap {
     my $preput;
     my $child_pid;
     my $wait = 1;
+    my $sigterm_rl = 0;
     my $segment_id = shmget (IPC_PRIVATE, 0x1000, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
 
     if (scalar(@_) > 0) {
@@ -167,15 +208,16 @@ sub readline_signaltrap {
 
     if ($child_pid = fork) {
        my $value;
-       $SIG{INT}  = sub { print "CTRL+C\n"; $wait = 0; };
-       $SIG{TSTP} = sub { };
+       local $SIG{INT}  = sub { print "\nCTRL+C\n" if ($DEBUG); $wait = 0; };
+       local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm_rl = 1; $wait = 0; };
+       #local $SIG{TSTP} = sub { };
        print "DEBUG (parent)\n" if ($DEBUG);
        while ($wait and not waitpid($child_pid, WNOHANG)) {
            sleep(0.1);
        };
        if (not $wait) {
            print "DEBUG POST CTRL+C\n" if ($DEBUG);
-           kill 'KILL', $child_pid;
+	   kill 'KILL', $child_pid;
            print "DEBUG POST KILL\n" if ($DEBUG);
            $value = "";
        } else {
@@ -185,7 +227,7 @@ sub readline_signaltrap {
        };
        shmctl($segment_id, IPC_RMID, 0);
        $value =~ s/\0//g;
-       return $value;
+       return ($value, $sigterm_rl);
     } else {
        my $value;
        print "DEBUG (child)\n" if ($DEBUG);
@@ -201,5 +243,18 @@ sub readline_signaltrap {
        shmwrite($segment_id, $value, 0, 0x1000) || die "$!";
        exit(0);
     };
+};
+
+sub flush_output_pipes {
+  my $pm_stdout_h = shift;
+  my $pm_stdout_buffer = shift;
+  my $pm_stderr_h = shift;
+  my $pm_stderr_buffer = shift;
+  if (defined $pm_stdout_h) {
+    pipe_lines($pm_stdout_h,$pm_stdout_buffer,'< ');
+  };
+  if (defined $pm_stderr_h) {
+    pipe_lines($pm_stderr_h,$pm_stderr_buffer,'! ');
+  };
 };
 
