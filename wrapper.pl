@@ -103,7 +103,7 @@ while (1) {
 
   if (rindex($key_buffer, "/", 0) == 0) {
     # Recognize "//" prefix in input and perform wrapper function instead of passing through directly to Minecraft Server
-    printf "double slash?\n";
+    printf "No double-slash commands defined.\n";
     $key_buffer = "";
   } elsif ($key_buffer ne "") {
     # Write the line of input from keyboard into Minecraft Server STDIN
@@ -112,19 +112,21 @@ while (1) {
   };
 
   # Check if Minecraft Server is still running
-  my $res = waitpid($mcs_pid, WNOHANG);
-  my $err = $?;
-  if ($res == -1) {
-    $result = $err >> 8;
-    printf "Some error occurred %d\n", $result;
+  {
+    my $res = waitpid($mcs_pid, WNOHANG);
+    my $err = $?;
+    if ($res == -1) {
+      $result = $err >> 8;
+      printf "Some error occurred %d\n", $result;
+    };
+    if ($res) {
+      $result = $err >> 8;
+      printf "Minecraft server java process exited with error code %d\n", $result;
+      printf "res = %d\n", $res;
+      printf "err = %d\n", $err;
+    };
+    last if ($res != 0);
   };
-  if ($res) {
-    $result = $err >> 8;
-    printf "Minecraft server java process exited with error code %d\n", $result;
-    printf "res = %d\n", $res;
-    printf "err = %d\n", $err;
-  };
-  last if ($res != 0);
 
   # Pipe full output lines from Minecraft Server
   flush_output_pipes($mcs_out_h, $mcs_out_buffer, $mcs_err_h, $mcs_err_buffer);
@@ -189,9 +191,9 @@ sub pipe_lines {
 
 sub readline_signaltrap {
   my ($term, $prompt) = (shift, shift);
-  my ($preput, $child_pid, $wait, $sigterm_rl, $segment_id);
+  my ($preput, $child_pid, $wait, $sigterm, $segment_id);
   $wait = 1;
-  $sigterm_rl = 0;
+  $sigterm = 0;
   $segment_id = shmget(IPC_PRIVATE, 0x1000, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
 
   if (scalar(@_) > 0) {
@@ -201,7 +203,7 @@ sub readline_signaltrap {
   if ($child_pid = fork) {
     my $value;
     local $SIG{INT}  = sub { print "\n"; print "CTRL+C\n" if ($DEBUG); $wait = 0; };
-    local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm_rl = 1; $wait = 0; };
+    local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm = 1; $wait = 0; };
     print "DEBUG (parent)\n" if ($DEBUG);
     while ($wait and not waitpid($child_pid, WNOHANG)) {
       sleep(0.1);
@@ -218,7 +220,7 @@ sub readline_signaltrap {
     };
     shmctl($segment_id, IPC_RMID, 0);
     $value =~ s/\0//g;
-    return ($value, $sigterm_rl);
+    return ($value, $sigterm);
   } else {
     my $value;
     print "DEBUG (child)\n" if ($DEBUG);
