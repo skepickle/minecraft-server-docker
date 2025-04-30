@@ -2,7 +2,8 @@
 use strict;
 use warnings;
 use POSIX ":sys_wait_h";
-use IPC::SysV qw(IPC_STAT IPC_PRIVATE IPC_CREAT IPC_EXCL S_IRUSR S_IWUSR IPC_RMID);
+use IPC::SysV qw(IPC_STAT IPC_PRIVATE IPC_CREAT
+                 IPC_EXCL S_IRUSR S_IWUSR IPC_RMID);
 use Term::ReadLine;
 use Term::ReadKey;
 use IPC::Open3;
@@ -45,8 +46,24 @@ while (1) {
   $idle = 1;
 
   #TODO: check for presence of special action files
-  if (-e "..SAVE-ALL") {
+  if (0) {
+    # leave empty on purpose
+
+  } elsif (-e "..SAVE-ALL") {
     unlink("..SAVE-ALL");
+    next;
+
+  } elsif (-e "..SAVE-OFF") {
+    unlink("..SAVE-OFF");
+    next;
+
+  } elsif (-e "..SAVE-ON") {
+    unlink("..SAVE-ON");
+    next;
+
+  } elsif (-e "..TELEPORT") {
+    unlink("..TELEPORT");
+    next;
   };
 
   # Check STDIN for either '/' or up-arrow
@@ -102,7 +119,8 @@ while (1) {
   if ($sigterm) { sigterm_handler(); };
 
   if (rindex($key_buffer, "/", 0) == 0) {
-    # Recognize "//" prefix in input and perform wrapper function instead of passing through directly to Minecraft Server
+    # Recognize "//" prefix in input and perform wrapper function instead of
+    #   passing through directly to Minecraft Server
     printf "No double-slash commands defined.\n";
     $key_buffer = "";
   } elsif ($key_buffer ne "") {
@@ -121,7 +139,8 @@ while (1) {
     };
     if ($res) {
       $result = $err >> 8;
-      printf "Minecraft server java process exited with error code %d\n", $result;
+      printf "Minecraft server java process exited with error code %d\n",
+             $result;
       printf "res = %d\n", $res;
       printf "err = %d\n", $err;
     };
@@ -149,7 +168,8 @@ sub sigterm_handler {
   printf $mcs_in_h "stop\n";
   # Pipe full output lines from Minecraft Server
   while (1) {
-    flush_output_pipes($mcs_out_h, $mcs_out_buffer, $mcs_err_h, $mcs_err_buffer);
+    flush_output_pipes($mcs_out_h, $mcs_out_buffer,
+                       $mcs_err_h, $mcs_err_buffer);
     $r = waitpid($mcs_pid, WNOHANG);
     $e = $?;
     if ($r == -1) {
@@ -164,7 +184,8 @@ sub sigterm_handler {
       printf "err = %d\n", $e;
       last;
     };
-    flush_output_pipes($mcs_out_h, $mcs_out_buffer, $mcs_err_h, $mcs_err_buffer);
+    flush_output_pipes($mcs_out_h, $mcs_out_buffer,
+                       $mcs_err_h, $mcs_err_buffer);
     sleep(0.1);
   };
   exit($z);
@@ -194,7 +215,8 @@ sub readline_signaltrap {
   my ($preput, $child_pid, $wait, $sigterm, $segment_id);
   $wait = 1;
   $sigterm = 0;
-  $segment_id = shmget(IPC_PRIVATE, 0x1000, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
+  $segment_id = shmget(IPC_PRIVATE, 0x1000,
+                       IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
 
   if (scalar(@_) > 0) {
     $preput = shift;
@@ -202,8 +224,12 @@ sub readline_signaltrap {
 
   if ($child_pid = fork) {
     my $value;
-    local $SIG{INT}  = sub { print "\n"; print "CTRL+C\n" if ($DEBUG); $wait = 0; };
-    local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm = 1; $wait = 0; };
+    local $SIG{INT}  = sub {
+      print "\n"; print "CTRL+C\n" if ($DEBUG); $wait = 0;
+    };
+    local $SIG{TERM} = sub {
+      print("# Received SIGTERM\n"); $sigterm = 1; $wait = 0;
+    };
     print "DEBUG (parent)\n" if ($DEBUG);
     while ($wait and not waitpid($child_pid, WNOHANG)) {
       sleep(0.1);
