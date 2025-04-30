@@ -169,81 +169,76 @@ sub sigterm_handler {
 };
 
 sub pipe_lines {
-    my $fh     = $_[0];
-    my $buf    = $_[1];
-    my $prefix = $_[2];
-    my $key    = "";
-    my $result = 0;
-    $key = ReadKey(-1, $fh);
-    while (defined $key) {
-      $result = 1;
-      $buf .= $key;
-      if ($key eq "\n") {
-        print $prefix . $buf;
-        $buf = "";
-      };
-      $key = ReadKey(-1, $fh);
+  my $fh     = $_[0];
+  my $buf    = $_[1];
+  my $prefix = $_[2];
+  my $result = 0;
+  my $key    = ReadKey(-1, $fh);
+  while (defined $key) {
+    $result = 1;
+    $buf .= $key;
+    if ($key eq "\n") {
+      print $prefix . $buf;
+      $buf = "";
     };
-    $_[1] = $buf;
-    return $result;
+    $key = ReadKey(-1, $fh);
+  };
+  $_[1] = $buf;
+  return $result;
 };
 
 sub readline_signaltrap {
-    my ($term, $prompt) = (shift, shift);
-    my ($preput, $child_pid, $wait, $sigterm_rl, $segment_id);
-    $wait = 1;
-    $sigterm_rl = 0;
-    $segment_id = shmget(IPC_PRIVATE, 0x1000, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
+  my ($term, $prompt) = (shift, shift);
+  my ($preput, $child_pid, $wait, $sigterm_rl, $segment_id);
+  $wait = 1;
+  $sigterm_rl = 0;
+  $segment_id = shmget(IPC_PRIVATE, 0x1000, IPC_CREAT | IPC_EXCL | S_IRUSR | S_IWUSR);
 
-    if (scalar(@_) > 0) {
-      $preput = shift;
+  if (scalar(@_) > 0) {
+    $preput = shift;
+  };
+
+  if ($child_pid = fork) {
+    my $value;
+    local $SIG{INT}  = sub { print "\n"; print "CTRL+C\n" if ($DEBUG); $wait = 0; };
+    local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm_rl = 1; $wait = 0; };
+    print "DEBUG (parent)\n" if ($DEBUG);
+    while ($wait and not waitpid($child_pid, WNOHANG)) {
+      sleep(0.1);
     };
-
-    if ($child_pid = fork) {
-       my $value;
-       local $SIG{INT}  = sub { print "\n"; print "CTRL+C\n" if ($DEBUG); $wait = 0; };
-       local $SIG{TERM} = sub { print("# Received SIGTERM\n"); $sigterm_rl = 1; $wait = 0; };
-       print "DEBUG (parent)\n" if ($DEBUG);
-       while ($wait and not waitpid($child_pid, WNOHANG)) {
-           sleep(0.1);
-       };
-       if (not $wait) {
-           print "DEBUG POST CTRL+C\n" if ($DEBUG);
-	   kill 'KILL', $child_pid;
-           print "DEBUG POST KILL\n" if ($DEBUG);
-           $value = "";
-       } else {
-           print "DEBUG CHILD RETURNED\n" if ($DEBUG);
-           shmread($segment_id, $value, 0, 0x1000);
-           print "DEBUG SHM READ\n" if ($DEBUG);
-       };
-       shmctl($segment_id, IPC_RMID, 0);
-       $value =~ s/\0//g;
-       return ($value, $sigterm_rl);
+    if (not $wait) {
+      print "DEBUG POST CTRL+C\n" if ($DEBUG);
+      kill 'KILL', $child_pid;
+      print "DEBUG POST KILL\n" if ($DEBUG);
+      $value = "";
     } else {
-       my $value;
-       print "DEBUG (child)\n" if ($DEBUG);
-       ReadMode('normal');
-       $|=1;
-       if (defined $preput) {
-         $value = $term->readline($prompt,$preput);
-       } else {
-         $value = $term->readline($prompt);
-       };
-       $|=0;
-       ReadMode('raw');
-       shmwrite($segment_id, $value, 0, 0x1000) || die "$!";
-       exit(0);
+      print "DEBUG CHILD RETURNED\n" if ($DEBUG);
+      shmread($segment_id, $value, 0, 0x1000);
+      print "DEBUG SHM READ\n" if ($DEBUG);
     };
+    shmctl($segment_id, IPC_RMID, 0);
+    $value =~ s/\0//g;
+    return ($value, $sigterm_rl);
+  } else {
+    my $value;
+    print "DEBUG (child)\n" if ($DEBUG);
+    ReadMode('normal');
+    $|=1;
+    if (defined $preput) {
+      $value = $term->readline($prompt,$preput);
+    } else {
+      $value = $term->readline($prompt);
+    };
+    $|=0;
+    ReadMode('raw');
+    shmwrite($segment_id, $value, 0, 0x1000) || die "$!";
+    exit(0);
+  };
 };
 
 sub flush_output_pipes {
   my ($out_h, $out_b, $err_h, $err_b) = (shift, shift, shift, shift);
-  if (defined $out_h) {
-    pipe_lines($out_h, $out_b,'< ');
-  };
-  if (defined $err_h) {
-    pipe_lines($err_h, $err_b,'! ');
-  };
+  pipe_lines($out_h, $out_b,'< ') if (defined $out_h);
+  pipe_lines($err_h, $err_b,'! ') if (defined $err_h);
 };
 
