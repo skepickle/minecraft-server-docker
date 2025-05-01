@@ -46,22 +46,37 @@ while (1) {
   $idle = 1;
 
   #TODO: check for presence of special action files
-  if (0) {
-    # leave empty on purpose
+  if
 
-  } elsif (-e "..SAVE-ALL") {
+  (-e "..SAVE-ALL") {
+    printf $mcs_in_h "save-all" . "\n";
+    if (not defined $mcs_out_h) {
+      print("ERROR: Minecraft Server output handle is undefined.\n");
+      unlink("..SAVE-ALL");
+      next;
+    };
+    do {
+      # nothing
+      sleep(0.1);
+    } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
+    print("FOUND MATCHING LINE.\n");
     unlink("..SAVE-ALL");
     next;
+  } elsif
 
-  } elsif (-e "..SAVE-OFF") {
+  (-e "..SAVE-OFF") {
     unlink("..SAVE-OFF");
+    printf $mcs_in_h "save-off" . "\n";
     next;
+  } elsif
 
-  } elsif (-e "..SAVE-ON") {
+  (-e "..SAVE-ON") {
     unlink("..SAVE-ON");
+    printf $mcs_in_h "save-on" . "\n";
     next;
+  } elsif
 
-  } elsif (-e "..TELEPORT") {
+  (-e "..TELEPORT") {
     unlink("..TELEPORT");
     next;
   };
@@ -80,7 +95,6 @@ while (1) {
     };
   };
   $key_pressed = 0 unless defined $key_pressed;
-  last if ($key_pressed eq "q");
   if ($key_pressed eq "/") {
     $key_pressed  = 1;
     $idle         = 0;
@@ -210,6 +224,30 @@ sub pipe_lines {
   return $result;
 };
 
+sub pipe_lines_until_match {
+  my $fh     = $_[0];
+  my $buf    = $_[1];
+  my $prefix = $_[2];
+  my $regex  = $_[3];
+  my $result = 0;
+  my $key    = ReadKey(-1, $fh);
+  while (defined $key) {
+    $buf .= $key;
+    if ($key eq "\n") {
+      print $prefix . $buf;
+      if ($buf =~ $regex) {
+        $result = 1;
+        $buf = "";
+        last;
+      };
+      $buf = "";
+    };
+    $key = ReadKey(-1, $fh);
+  };
+  $_[1] = $buf;
+  return $result;
+};
+
 sub readline_signaltrap {
   my ($term, $prompt) = (shift, shift);
   my ($preput, $child_pid, $wait, $sigterm, $segment_id);
@@ -266,7 +304,7 @@ sub readline_signaltrap {
 
 sub flush_output_pipes {
   my ($out_h, $out_b, $err_h, $err_b) = (shift, shift, shift, shift);
-  pipe_lines($out_h, $out_b,'< ') if (defined $out_h);
-  pipe_lines($err_h, $err_b,'! ') if (defined $err_h);
+  pipe_lines($out_h, $out_b, '< ') if (defined $out_h);
+  pipe_lines($err_h, $err_b, '! ') if (defined $err_h);
 };
 
