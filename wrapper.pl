@@ -59,25 +59,57 @@ while (1) {
       # nothing
       sleep(0.1);
     } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
-    print("FOUND MATCHING LINE.\n");
+    #print("FOUND MATCHING LINE.\n");
     unlink("..SAVE-ALL");
+    sleep(0.1);
     next;
   } elsif
 
   (-e "..SAVE-OFF") {
     unlink("..SAVE-OFF");
     printf $mcs_in_h "save-off" . "\n";
+    sleep(0.1);
     next;
   } elsif
 
   (-e "..SAVE-ON") {
     unlink("..SAVE-ON");
     printf $mcs_in_h "save-on" . "\n";
+    sleep(0.1);
     next;
   } elsif
 
   (-e "..TELEPORT") {
+    open(FH, '<', "..TELEPORT"); #TODO handle errors?
+    while(<FH>) {
+      print $_;
+      sleep(0.1);
+    }
+    close(FH);
     unlink("..TELEPORT");
+    sleep(0.1);
+    next;
+  } elsif
+
+  (-e "..BACKUP") {
+    printf $mcs_in_h "save-off" . "\n";
+    printf $mcs_in_h "save-all" . "\n";
+    do {
+      # nothing
+      sleep(0.1);
+    } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
+
+    my $timestamp  = `date +%Y%m%dT%H%M%SZ`;
+    chomp($timestamp);
+    `tar cjf $timestamp.tar.bz2 .`;
+    for my $backup_path (split(/:/, "$ENV{BACKUP_DIRS}")) {
+      print("$timestamp  -  $backup_path", "\n");
+      `cp $timestamp.tar.bz2 $backup_path`;
+    }
+    unlink("$timestamp.tar.bz2");
+    printf $mcs_in_h "save-on" . "\n";
+    unlink("..BACKUP");
+    sleep(0.1);
     next;
   };
 
