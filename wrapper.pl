@@ -82,6 +82,7 @@ while (1) {
     open(FH, '<', "..TELEPORT");
     my $params = <FH>;
     close(FH);
+    chomp($params);
     printf $mcs_in_h "teleport " . $params . "\n";
     unlink("..TELEPORT");
     sleep(0.1);
