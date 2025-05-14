@@ -1,0 +1,10 @@
+[Unit]
+Description=Trigger backup of Minecraft world mc1
+Requires=backup-example-mc1.service
+
+[Timer]
+Unit=backup-example-mc1.service
+OnCalendar=*-*-* 0:00:00
+
+[Install]
+WantedBy=timers.target

@@ -45,7 +45,6 @@ while (1) {
 
   $idle = 1;
 
-  #TODO: check for presence of special action files
   if
 
   (-e "..SAVE-ALL") {
@@ -80,12 +79,10 @@ while (1) {
   } elsif
 
   (-e "..TELEPORT") {
-    open(FH, '<', "..TELEPORT"); #TODO handle errors?
-    while(<FH>) {
-      print $_;
-      sleep(0.1);
-    }
+    open(FH, '<', "..TELEPORT");
+    my $params = <FH>;
     close(FH);
+    printf $mcs_in_h "teleport " . $params . "\n";
     unlink("..TELEPORT");
     sleep(0.1);
     next;
@@ -101,12 +98,17 @@ while (1) {
 
     my $timestamp  = `date +%Y%m%dT%H%M%SZ`;
     chomp($timestamp);
-    `tar cjf $timestamp.tar.bz2 .`;
+    my $first_iteration = 1;
+    my $first_location  = "";
     for my $backup_path (split(/:/, "$ENV{BACKUP_DIRS}")) {
-      print("$timestamp  -  $backup_path", "\n");
-      `cp $timestamp.tar.bz2 $backup_path`;
-    }
-    unlink("$timestamp.tar.bz2");
+      if ($first_iteration) {
+        $first_location  = "$backup_path/$timestamp.tar.bz2";
+        `tar cjf $first_location .`;
+        $first_iteration = 0;
+      } else {
+        `cp $first_location $backup_path`;
+      };
+    };
     printf $mcs_in_h "save-on" . "\n";
     unlink("..BACKUP");
     sleep(0.1);
@@ -182,15 +184,16 @@ while (1) {
     if ($res == -1) {
       $result = $err >> 8;
       printf "Some error occurred %d\n", $result;
+      last;
     };
-    if ($res) {
+    if ($res != 0) {
       $result = $err >> 8;
       printf "Minecraft server java process exited with error code %d\n",
              $result;
       printf "res = %d\n", $res;
       printf "err = %d\n", $err;
+      last;
     };
-    last if ($res != 0);
   };
 
   # Pipe full output lines from Minecraft Server

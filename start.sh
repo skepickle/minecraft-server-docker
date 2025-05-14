@@ -6,7 +6,7 @@ else
   IN_DOCKER='false'
 fi
 
-if [[ "${IN_DOCKER}" == "false" ]]; then tmux pipe-pane -o "cat >>$(pwd)/wrapper.log"; fi
+if [[ "${IN_DOCKER}" == "false" ]]; then tmux pipe-pane -o "cat >>$(pwd)/tmux.log"; fi
 
 # NOTE: This script should be executed with `pwd` at the Minecraft world's base folder
 . .mcenv

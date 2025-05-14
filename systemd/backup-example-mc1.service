@@ -1,0 +1,12 @@
+[Unit]
+Description=Perform backup of Minecraft world mc1
+Wants=backup-example-mc1.timer
+
+[Service]
+Type=oneshot
+User=example
+WorkingDirectory=/home/example/mc1
+ExecStart=/usr/bin/touch ..BACKUP
+
+[Install]
+WantedBy=multi-user.target
