@@ -90,15 +90,22 @@ while (1) {
   } elsif
 
   (-e "..BACKUP") {
-    printf $mcs_in_h "save-off" . "\n";
-    printf $mcs_in_h "save-all" . "\n";
-    do {
-      # nothing
-      sleep(0.1);
-    } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
-
     my $timestamp  = `date +%Y%m%dT%H%M%SZ`;
     chomp($timestamp);
+
+    printf $mcs_in_h "save-all" . "\n";
+    do {
+      sleep(1); # do nothing
+    } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
+    sleep(5);
+    printf $mcs_in_h "save-off" . "\n";
+    sleep(5);
+    printf $mcs_in_h "save-all" . "\n";
+    do {
+      sleep(1); # do nothing
+    } until (pipe_lines_until_match($mcs_out_h, $mcs_out_buffer, '< ', qr/: Saved the game$/));
+    sleep(5);
+
     my $first_iteration = 1;
     my $first_location  = "";
     for my $backup_path (split(/:/, "$ENV{BACKUP_DIRS}")) {
